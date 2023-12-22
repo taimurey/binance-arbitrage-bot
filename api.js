@@ -1,6 +1,6 @@
 const axios = require('axios');
 const crypto = require('crypto');
-const io = require('./logger');
+const io = require('./logging/logger');
 
 async function exchangeInfo() {
     const response = await axios.get(`${process.env.API_URL}/v3/exchangeInfo`);
