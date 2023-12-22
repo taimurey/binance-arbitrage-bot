@@ -94,12 +94,12 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
     // Access lotSizeInfo for the symbol
      const lotSizeInfo = exchangeData[symbol] || {};
 
-    //  // Fetch current balance
+     // Fetch current balance
     //  const asset = side === "BUY" ? symbol.split(/(BTC|ETH|USDT)$/)[1] : symbol.split(/(BTC|ETH|USDT)$/)[0];
     //  const currentBalance = await getCurrentBalance(asset);
     //  logMessage(`Current ${asset} balance: ${currentBalance}`);
  
-    //  // Adjust quantity for LOT_SIZE if selling
+    // Adjust quantity for LOT_SIZE if selling
      if (side !== "BUY") {
          quantity = adjustQuantityForLotSize(quantity, lotSizeInfo.minQty, lotSizeInfo.maxQty, lotSizeInfo.stepSize);
      }
