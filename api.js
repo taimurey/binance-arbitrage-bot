@@ -111,7 +111,8 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
 }
 
 function logMessage(message) {
-    const formattedMessage = JSON.stringify(message, null, 2); 
+    const currentTime = new Date().toLocaleTimeString(); 
+    const formattedMessage = `${currentTime}: ${JSON.stringify(message, null, 2)}`;
     io.emit('log1', formattedMessage);
 }
 
@@ -122,4 +123,4 @@ function logMessage2(message) {
 }
 
 
-module.exports = { exchangeInfo, newOrder }
+module.exports = { exchangeInfo, newOrder, logMessage }

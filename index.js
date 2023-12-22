@@ -1,5 +1,6 @@
 const { exchangeInfo, newOrder } = require("./api");
 const stream = require("./stream");
+const { logMessage } = require("./api");
 
 const QUOTE = process.env.QUOTE;
 const AMOUNT = parseInt(process.env.AMOUNT);
@@ -65,17 +66,17 @@ async function processBuyBuySell(buyBuySell) {
         //se tem o preço dos 3, pode analisar a lucratividade
         const crossRate = (1 / priceBuy1) * (1 / priceBuy2) * priceSell1;
         if (crossRate > PROFITABILITY) {
-            console.log(`OP BBS EM ${candidate.buy1.symbol} > ${candidate.buy2.symbol} > ${candidate.sell1.symbol} = ${crossRate}`);
-            console.log(`Investindo ${QUOTE} ${AMOUNT}, retorna: ${QUOTE} ${((AMOUNT / priceBuy1) / priceBuy2) * priceSell1}`);
-            console.log("ENVIANDO COMPRA 1");
+            logMessage(`OP BBS EM ${candidate.buy1.symbol} > ${candidate.buy2.symbol} > ${candidate.sell1.symbol} = ${crossRate}`);
+            logMessage(`Investindo ${QUOTE} ${AMOUNT}, retorna: ${QUOTE} ${((AMOUNT / priceBuy1) / priceBuy2) * priceSell1}`);
+            logMessage("ENVIANDO COMPRA 1");
             const dataBuy1 = await newOrder(candidate.buy1.symbol, AMOUNT, "BUY");
-            console.log("ENVIANDO COMPRA 2");
+            logMessage("ENVIANDO COMPRA 2");
 
            try{ 
             const dataBuy2 = await newOrder(candidate.buy2.symbol, 0, "BUY", dataBuy1.executedQty);
-            console.log("Second Order Placed");
+            logMessage("Second Order Placed");
            
-           console.log("ENVIANDO VENDA 3");
+           logMessage("ENVIANDO VENDA 3");
            newOrder(candidate.sell1.symbol, dataBuy2.executedQty, "SELL");
 
               } catch (error) {
@@ -105,13 +106,13 @@ async function processBuySellSell(buySellSell) {
         //se tem o preço dos 3, pode analisar a lucratividade
         const crossRate = (1 / priceBuy1) * priceSell1 * priceSell2;
         if (crossRate > PROFITABILITY) {
-            console.log(`OP BSS EM ${candidate.buy1.symbol} > ${candidate.sell1.symbol} > ${candidate.sell2.symbol} = ${crossRate}`);
-            console.log(`Investindo ${QUOTE} ${AMOUNT}, retorna ${QUOTE}${((AMOUNT / priceBuy1) * priceSell1) * priceSell2}`);
-            console.log("ENVIANDO COMPRA 1");
+            logMessage(`OP BSS EM ${candidate.buy1.symbol} > ${candidate.sell1.symbol} > ${candidate.sell2.symbol} = ${crossRate}`);
+            logMessage(`Investindo ${QUOTE} ${AMOUNT}, retorna ${QUOTE}${((AMOUNT / priceBuy1) * priceSell1) * priceSell2}`);
+            logMessage("ENVIANDO COMPRA 1");
             const dataBuy1 = await newOrder(candidate.buy1.symbol, AMOUNT, "BUY");
-            console.log("ENVIANDO VENDA 2");
+            logMessage("ENVIANDO VENDA 2");
             const dataSell1 = await newOrder(candidate.sell1.symbol, dataBuy1.executedQty, "SELL");
-            console.log("ENVIANDO VENDA 3");
+            logMessage("ENVIANDO VENDA 3");
             newOrder(candidate.sell2.symbol, dataSell1.executedQty, "SELL");
           
         }
@@ -126,26 +127,26 @@ function getSymbolMap(symbols) {
 
 async function start() {
     //pega todas moedas que estão sendo negociadas
-    console.log('Loading Exchange Info...');
+    logMessage('Loading Exchange Info...');
     const allSymbols = await exchangeInfo();
 
     //moedas que você pode comprar
     const buySymbols = allSymbols.filter(s => s.quote === QUOTE);
-    console.log('There are ' + buySymbols.length + " pairs that you can buy with " + QUOTE);
+    logMessage('There are ' + buySymbols.length + " pairs that you can buy with " + QUOTE);
 
     //organiza em map para performance
     const symbolsMap = getSymbolMap(allSymbols);
 
     //descobre todos os pares que podem triangular BUY-BUY-SELL
     const buyBuySell = getBuyBuySell(buySymbols, allSymbols, symbolsMap);
-    console.log('There are ' + buyBuySell.length + " pairs that we can do BBS");
+    logMessage('There are ' + buyBuySell.length + " pairs that we can do BBS");
 
     //descobre todos os pares que podem triangular BUY-SELL-SELL
     const buySellSell = getBuySellSell(buySymbols, allSymbols, symbolsMap);
-    console.log('There are ' + buySellSell.length + " pairs that we can do BSS");
+    logMessage('There are ' + buySellSell.length + " pairs that we can do BSS");
 
     setInterval(async () => {
-        console.log(new Date());
+        logMessage(new Date());
         processBuyBuySell(buyBuySell);
         processBuySellSell(buySellSell);
     }, INTERVAL || 3000)

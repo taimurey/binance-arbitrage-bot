@@ -28,6 +28,7 @@
             background-color: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             min-height: 300px;
+            height: 800px;
             overflow-y: auto;
             font-size: small;
         }
@@ -45,6 +46,15 @@
         .log-time {
             color: #28a745; 
         }
+        
+    .log-message {
+        margin-bottom: 10px; /* Adjust as needed for spacing */
+    }
+
+    .log-time {
+        color: #28a745;
+       
+    }
     </style>
 </head>
 <body>
@@ -56,17 +66,47 @@
     <script>
         const socket = io();
     
+        function isScrolledToBottom(element) {
+            // Check if the user is scrolled up more than a certain threshold
+            return element.scrollHeight - element.scrollTop - element.clientHeight < 5;
+        }
+    
+        function appendLogMessage(logContainer, messageElement) {
+            const wasScrolledToBottom = isScrolledToBottom(logContainer);
+            logContainer.appendChild(messageElement);
+    
+            // If the user was scrolled to the bottom, keep scrolling to the new bottom
+            if (wasScrolledToBottom) {
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        }
+    
         socket.on('log1', function(msg) {
-            const logContainer1 = document.getElementById('log1');
-            logContainer1.innerHTML += msg + '<br>';
-        });
+                const logContainer1 = document.getElementById('log1');
+                const messageElement = document.createElement('div');
+                messageElement.className = 'error-message';
+
+                if (msg.includes("T") && msg.length === 24) {
+                    const timeElement = document.createElement('span');
+                    timeElement.className = 'log-time';
+                    timeElement.textContent = msg;
+                    messageElement.appendChild(timeElement);
+                } else {
+                    const textElement = document.createElement('span'); // Create a span for the text
+                    textElement.className = 'log-time'; // Apply the new class
+                    textElement.textContent = msg;
+                    messageElement.appendChild(textElement); // Append the text span to the message element
+                }
+
+                appendLogMessage(logContainer1, messageElement);
+            });
+
     
         socket.on('log2', function(msg) {
             const logContainer2 = document.getElementById('log2');
             const messageElement = document.createElement('div');
             messageElement.className = 'error-message';
     
-            // Split the message into time and the rest of the message
             const [time, ...restOfMessage] = msg.split(': ');
             const restOfMessageString = restOfMessage.join(': ');
     
@@ -78,9 +118,8 @@
     
             messageElement.appendChild(timeElement);
             messageElement.appendChild(textNode);
-            logContainer2.appendChild(messageElement);
+            appendLogMessage(logContainer2, messageElement);
         });
     </script>
-    
 </body>
 </html>
