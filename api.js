@@ -67,55 +67,110 @@ async function getCurrentBalance(asset) {
         const data = response.data.balances.find(b => b.asset === asset);
         return data ? data.free : 0; // Return 0 if asset not found
     } catch (err) {
-        console.error('Error in getCurrentBalance: ', err.message);
+        console.error('Error in getCurrentBalance: ', err);
         return 0; // Return 0 in case of error for safe fallback
     }
 }
 
+
 // Function to adjust quantity according to LOT_SIZE filter
 function adjustQuantityForLotSize(quantity, minQty, maxQty, stepSize) {
-    if (!minQty || !maxQty || !stepSize) return quantity; // If filter details are not available, return original quantity
+    if (!minQty || !maxQty || !stepSize) return quantity;
 
-    quantity = Math.max(minQty, Math.min(quantity, maxQty)); // Ensure within min/max limits
+    // Ensure all values are numeric
+    [quantity, minQty, maxQty, stepSize].forEach(value => {
+        if (isNaN(value)) {
+            console.error(`Invalid parameter: ${value}`);
+            return NaN;
+        }
+    });
+
+    // Adjusting quantity to be within min and max limits
+    quantity = Math.max(minQty, Math.min(quantity, maxQty));
+
+    // Adjusting quantity to align with step size - using a less aggressive rounding strategy
     const stepFactor = 1 / stepSize;
-    return Math.floor(quantity * stepFactor) / stepFactor; // Align with step size
+    quantity = Math.floor(quantity * stepFactor) / stepFactor;
+
+    // Ensuring the adjusted quantity is still within the range and not less than the minimum
+    quantity = Math.max(minQty, quantity);
+    return quantity <= maxQty ? quantity : NaN;
+}
+
+// Function to correctly round the quantity to the nearest valid step size
+function roundToStepSize(quantity, stepSize) {
+    const precision = stepSize.toString().split('.')[1]?.length || 0;
+    const scaler = Math.pow(10, precision);
+    return Math.floor(quantity * scaler) / scaler;
+}
+
+function getCurrentPrice(symbol) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const response = await axios.get(`${process.env.API_URL}/v3/ticker/price?symbol=${symbol}`);
+            resolve(response.data.price);
+        } catch (err) {
+            reject(err);
+        }
+    });
 }
 
 
 async function newOrder(symbol, quantity, side, quoteOrderQty) {
+    console.log(`Placing new order for symbol: ${symbol}`);
+
     const data = {
         symbol,
         side,
         type: 'MARKET',
         timestamp: Date.now(),
-        recvWindow: 5000//máximo permitido 60000, default 5000
+        recvWindow: 5000
     };
 
-    // Access lotSizeInfo for the symbol
-     const lotSizeInfo = exchangeData[symbol] || {};
+    const { minQty, maxQty, stepSize, minNotional } = exchangeData[symbol] || {};
 
-     // Fetch current balance
-    //  const asset = side === "BUY" ? symbol.split(/(BTC|ETH|USDT)$/)[1] : symbol.split(/(BTC|ETH|USDT)$/)[0];
-    //  const currentBalance = await getCurrentBalance(asset);
-    //  logMessage(`Current ${asset} balance: ${currentBalance}`);
- 
-    // Adjust quantity for LOT_SIZE if selling
-     if (side !== "BUY") {
-         quantity = adjustQuantityForLotSize(quantity, lotSizeInfo.minQty, lotSizeInfo.maxQty, lotSizeInfo.stepSize);
-     }
-        
+    // Fetch current balance
+    const asset = side === "BUY" ? symbol.split(/(BTC|ETH|USDT)$/)[1] : symbol.split(/(BTC|ETH|USDT)$/)[0];
+    let currentBalance = await getCurrentBalance(asset);
+    if (!currentBalance) {
+        console.error(`Failed to fetch current balance for ${asset}`);
+        return false;
+    }
 
-    if (side === "BUY" && quantity)
+    currentBalance = parseFloat(currentBalance);
+    if (isNaN(currentBalance)) {
+        console.error(`Invalid current balance for ${asset}:`, currentBalance);
+        return false;
+    }
+    logMessage(`Current ${asset} balance: ${currentBalance}`);
+
+    if (minQty && maxQty && stepSize) {
+        quantity = Math.max(minQty, Math.min(quantity, maxQty));
+        quantity = roundToStepSize(quantity, stepSize);
+    }
+
+    console.log(`Quantity after LOT_SIZE adjustment for ${symbol}:`, quantity);
+
+    if (side !== "BUY") {
+        quantity = Math.min(quantity, currentBalance);
+        quantity = roundToStepSize(quantity, stepSize);
+        if (isNaN(quantity)) {
+            console.error(`Quantity became NaN after balance adjustment for ${symbol}`);
+            return false;
+        }
+    }
+
+    console.log(`Quantity after balance adjustment for ${symbol}:`, quantity);
+
+    if (side === "BUY" && quantity) {
         data.quoteOrderQty = quantity;
-    else
+    } else {
         data.quantity = quantity || quoteOrderQty;
+    }
 
-    const signature = crypto
-        .createHmac('sha256', process.env.SECRET_KEY)
-        .update(`${new URLSearchParams(data)}`)
-        .digest('hex');
+    console.log(`Final Quantity for ${symbol}:`, quantity);
 
-
+    const signature = crypto.createHmac('sha256', process.env.SECRET_KEY).update(`${new URLSearchParams(data)}`).digest('hex');
     const newData = { ...data, signature };
     const qs = `?${new URLSearchParams(newData)}`;
 
@@ -125,15 +180,13 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
             url: `${process.env.API_URL}/v3/order${qs}`,
             headers: { 'X-MBX-APIKEY': process.env.API_KEY }
         });
-        logMessage(`API Response: ${result.data}`);
+        logMessage(`API Response for ${symbol}: ${JSON.stringify(result.data)}`);
         return result.data;
     } catch (err) {
-        logMessage2(err.response.data);
+        logMessage2(`Error in placing order for ${symbol}: ${JSON.stringify(err.response.data.message)}`);
         return false;
     }
 }
-
-
 
 
 module.exports = { exchangeInfo, newOrder, logMessage }

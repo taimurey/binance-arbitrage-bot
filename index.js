@@ -66,18 +66,18 @@ async function processBuyBuySell(buyBuySell) {
         //se tem o preço dos 3, pode analisar a lucratividade
         const crossRate = (1 / priceBuy1) * (1 / priceBuy2) * priceSell1;
         if (crossRate > PROFITABILITY) {
-            logMessage(`OP BBS EM ${candidate.buy1.symbol} > ${candidate.buy2.symbol} > ${candidate.sell1.symbol} = ${crossRate}`);
-            logMessage(`Investindo ${QUOTE} ${AMOUNT}, retorna: ${QUOTE} ${((AMOUNT / priceBuy1) / priceBuy2) * priceSell1}`);
-            logMessage("ENVIANDO COMPRA 1");
-            const dataBuy1 = await newOrder(candidate.buy1.symbol, AMOUNT, "BUY");
-            logMessage("ENVIANDO COMPRA 2");
+         logMessage(`OP BBS EM ${candidate.buy1.symbol} > ${candidate.buy2.symbol} > ${candidate.sell1.symbol} = ${crossRate}`);
+logMessage(`Investing ${QUOTE} ${AMOUNT}, returns: ${QUOTE} ${((AMOUNT / priceBuy1) / priceBuy2) * priceSell1}`);
+logMessage("SENDING BUY ORDER 1");
+const dataBuy1 = await newOrder(candidate.buy1.symbol, AMOUNT, "BUY");
+logMessage("SENDING BUY ORDER 2");
 
-           try{ 
-            const dataBuy2 = await newOrder(candidate.buy2.symbol, 0, "BUY", dataBuy1.executedQty);
-            logMessage("Second Order Placed");
-           
-           logMessage("ENVIANDO VENDA 3");
-           newOrder(candidate.sell1.symbol, dataBuy2.executedQty, "SELL");
+try{ 
+    const dataBuy2 = await newOrder(candidate.buy2.symbol, 0, "BUY", dataBuy1.executedQty);
+    logMessage("Second Order Placed");
+
+    logMessage("SENDING SELL ORDER 3");
+    newOrder(candidate.sell1.symbol, dataBuy2.executedQty, "SELL");
 
               } catch (error) {
                 console.error("Error placing second order: ", error.message);
@@ -106,13 +106,13 @@ async function processBuySellSell(buySellSell) {
         //se tem o preço dos 3, pode analisar a lucratividade
         const crossRate = (1 / priceBuy1) * priceSell1 * priceSell2;
         if (crossRate > PROFITABILITY) {
-            logMessage(`OP BSS EM ${candidate.buy1.symbol} > ${candidate.sell1.symbol} > ${candidate.sell2.symbol} = ${crossRate}`);
-            logMessage(`Investindo ${QUOTE} ${AMOUNT}, retorna ${QUOTE}${((AMOUNT / priceBuy1) * priceSell1) * priceSell2}`);
-            logMessage("ENVIANDO COMPRA 1");
+          logMessage(`OP BSS EM ${candidate.buy1.symbol} > ${candidate.sell1.symbol} > ${candidate.sell2.symbol} = ${crossRate}`);
+            logMessage(`Investing ${QUOTE} ${AMOUNT}, returns ${QUOTE}${((AMOUNT / priceBuy1) * priceSell1) * priceSell2}`);
+            logMessage("SENDING BUY 1");
             const dataBuy1 = await newOrder(candidate.buy1.symbol, AMOUNT, "BUY");
-            logMessage("ENVIANDO VENDA 2");
+            logMessage("SENDING SELL 2");
             const dataSell1 = await newOrder(candidate.sell1.symbol, dataBuy1.executedQty, "SELL");
-            logMessage("ENVIANDO VENDA 3");
+            logMessage("SENDING SELL 3");
             newOrder(candidate.sell2.symbol, dataSell1.executedQty, "SELL");
           
         }
