@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trading Bot Logs</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #007bff;
+        }
+        .log-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .log-section {
+            flex: 1;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin: 10px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 300px;
+            overflow-y: auto;
+        }
+        .log-section:nth-child(1) {
+            border-left-color: #28a745;
+        }
+        .log-section:nth-child(2) {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>Binance Arbitrage</h1>
+    <div class="log-container">
+        <div id="log1" class="log-section"></div>
+        <div id="log2" class="log-section"></div>
+    </div>
+    <script>
+        const socket = io();
+
+        socket.on('log1', function(msg) {
+            const logContainer1 = document.getElementById('log1');
+            logContainer1.innerHTML += msg + '<br>';
+        });
+
+        socket.on('log2', function(msg) {
+            const logContainer2 = document.getElementById('log2');
+            logContainer2.innerHTML += msg + '<br>';
+        });
+    </script>
+</body>
+</html>

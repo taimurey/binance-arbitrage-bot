@@ -66,7 +66,7 @@ async function processBuyBuySell(buyBuySell) {
         const crossRate = (1 / priceBuy1) * (1 / priceBuy2) * priceSell1;
         if (crossRate > PROFITABILITY) {
             console.log(`OP BBS EM ${candidate.buy1.symbol} > ${candidate.buy2.symbol} > ${candidate.sell1.symbol} = ${crossRate}`);
-            console.log(`Investindo ${QUOTE}${AMOUNT}, retorna: ${QUOTE} ${((AMOUNT / priceBuy1) / priceBuy2) * priceSell1}`);
+            console.log(`Investindo ${QUOTE} ${AMOUNT}, retorna: ${QUOTE} ${((AMOUNT / priceBuy1) / priceBuy2) * priceSell1}`);
             console.log("ENVIANDO COMPRA 1");
             const dataBuy1 = await newOrder(candidate.buy1.symbol, AMOUNT, "BUY");
             console.log("ENVIANDO COMPRA 2");
