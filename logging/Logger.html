@@ -30,7 +30,7 @@
             min-height: 300px;
             height: 800px;
             overflow-y: auto;
-            font-size: small;
+            font-size: medium;
         }
         .log-section:nth-child(1) {
             border-left-color: #28a745;
@@ -82,24 +82,24 @@
         }
     
         socket.on('log1', function(msg) {
-                const logContainer1 = document.getElementById('log1');
-                const messageElement = document.createElement('div');
-                messageElement.className = 'error-message';
+            const logContainer1 = document.getElementById('log1');
+            const messageElement = document.createElement('div');
+                messageElement.className = 'log-message'; // Changed to 'log-message' to match the style of 'log2'
 
-                if (msg.includes("T") && msg.length === 24) {
-                    const timeElement = document.createElement('span');
-                    timeElement.className = 'log-time';
-                    timeElement.textContent = msg;
-                    messageElement.appendChild(timeElement);
-                } else {
-                    const textElement = document.createElement('span'); // Create a span for the text
-                    textElement.className = 'log-time'; // Apply the new class
-                    textElement.textContent = msg;
-                    messageElement.appendChild(textElement); // Append the text span to the message element
-                }
+                const [time, ...restOfMessage] = msg.split(': ');
+                const restOfMessageString = restOfMessage.join(': ');
 
+                const timeElement = document.createElement('span');
+                timeElement.className = 'log-time';
+                timeElement.textContent = time + ': ';
+
+                const textNode = document.createTextNode(restOfMessageString);
+
+                messageElement.appendChild(timeElement);
+                messageElement.appendChild(textNode);
                 appendLogMessage(logContainer1, messageElement);
             });
+
 
     
         socket.on('log2', function(msg) {

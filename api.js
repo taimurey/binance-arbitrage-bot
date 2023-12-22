@@ -27,6 +27,29 @@ async function exchangeInfo() {
     return data;
 }
 
+function logMessage(message) {
+    const currentTime = new Date().toLocaleTimeString();
+
+    let formattedMessage;
+
+    try {
+        // If the message is not a valid JSON object, handle it as a string
+        formattedMessage = `${currentTime}: ${message.toString()}`;
+    } catch (error) {
+        // Attempt to stringify if the message is a valid JSON object
+        formattedMessage = `${currentTime}: ${JSON.stringify(message, null, 2)}`;
+    }
+
+    io.emit('log1', formattedMessage);
+}
+
+
+function logMessage2(message) {
+    const currentTime = new Date().toLocaleTimeString(); 
+    const formattedMessage = `${currentTime}: ${JSON.stringify(message, null, 2)}`;
+    io.emit('log2', formattedMessage); 
+}
+
 
 async function getCurrentBalance(asset) {
     try {
@@ -110,17 +133,7 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
     }
 }
 
-function logMessage(message) {
-    const currentTime = new Date().toLocaleTimeString(); 
-    const formattedMessage = `${currentTime}: ${JSON.stringify(message, null, 2)}`;
-    io.emit('log1', formattedMessage);
-}
 
-function logMessage2(message) {
-    const currentTime = new Date().toLocaleTimeString(); 
-    const formattedMessage = `${currentTime}: ${JSON.stringify(message, null, 2)}`;
-    io.emit('log2', formattedMessage); 
-}
 
 
 module.exports = { exchangeInfo, newOrder, logMessage }

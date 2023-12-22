@@ -7,8 +7,9 @@ const io = require('socket.io')(server);
 const path = require('path');
 
 io.on('connection', (socket) => {
-    console.log('a user connected');
-    socket.emit('log', 'Connection established');
+    console.log('User Connected');
+    socket.emit('log1', 'Connection established');
+    socket.emit('log2', 'Connection established');
 });
 
 app.get('/', (req, res) => {
