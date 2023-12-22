@@ -114,9 +114,12 @@ function logMessage(message) {
     const formattedMessage = JSON.stringify(message, null, 2); 
     io.emit('log1', formattedMessage);
 }
+
 function logMessage2(message) {
-    const formattedMessage = JSON.stringify(message, null, 2); 
+    const currentTime = new Date().toLocaleTimeString(); 
+    const formattedMessage = `${currentTime}: ${JSON.stringify(message, null, 2)}`;
     io.emit('log2', formattedMessage); 
 }
+
 
 module.exports = { exchangeInfo, newOrder }

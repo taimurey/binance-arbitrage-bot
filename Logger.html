@@ -29,12 +29,21 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             min-height: 300px;
             overflow-y: auto;
+            font-size: small;
         }
         .log-section:nth-child(1) {
             border-left-color: #28a745;
         }
         .log-section:nth-child(2) {
             border-left-color: #dc3545;
+        }
+        .error-message {
+            color: #dc3545; 
+            margin-bottom: 5px;
+            white-space: pre-line; 
+        }
+        .log-time {
+            color: #28a745; 
         }
     </style>
 </head>
@@ -46,16 +55,32 @@
     </div>
     <script>
         const socket = io();
-
+    
         socket.on('log1', function(msg) {
             const logContainer1 = document.getElementById('log1');
             logContainer1.innerHTML += msg + '<br>';
         });
-
+    
         socket.on('log2', function(msg) {
             const logContainer2 = document.getElementById('log2');
-            logContainer2.innerHTML += msg + '<br>';
+            const messageElement = document.createElement('div');
+            messageElement.className = 'error-message';
+    
+            // Split the message into time and the rest of the message
+            const [time, ...restOfMessage] = msg.split(': ');
+            const restOfMessageString = restOfMessage.join(': ');
+    
+            const timeElement = document.createElement('span');
+            timeElement.className = 'log-time';
+            timeElement.textContent = time + ': ';
+    
+            const textNode = document.createTextNode(restOfMessageString);
+    
+            messageElement.appendChild(timeElement);
+            messageElement.appendChild(textNode);
+            logContainer2.appendChild(messageElement);
         });
     </script>
+    
 </body>
 </html>
