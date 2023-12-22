@@ -72,6 +72,80 @@ async function getCurrentBalance(asset) {
     }
 }
 
+async function swapBTCtoUSDT() {
+    const symbol = 'BTCUSDT'; // Assuming BTC to USDT trading pair
+    let quantity; // To be determined based on current BTC balance
+    const side = 'BUY'; // To buy USDT with BTC
+
+    console.log(`Placing new ${side} order for symbol: ${symbol}`);
+
+    const data = {
+        symbol,
+        side,
+        type: 'MARKET',
+        timestamp: Date.now(),
+        recvWindow: 5000
+    };
+
+    const { minQty, maxQty, stepSize } = exchangeData[symbol] || {};
+
+    // Fetch current BTC balance
+    const asset = 'BTC';
+    let currentBalance = await getCurrentBalance(asset);
+    if (!currentBalance) {
+        console.error(`Failed to fetch current balance for ${asset}`);
+        return false;
+    }
+
+    currentBalance = parseFloat(currentBalance);
+    if (isNaN(currentBalance)) {
+        console.error(`Invalid current balance for ${asset}:`, currentBalance);
+        return false;
+    }
+    logMessage(`Current ${asset} balance is: ${currentBalance}`);
+
+    // Adjust quantity based on balance and exchange requirements
+    quantity = currentBalance;
+    if (minQty && maxQty && stepSize) {
+        quantity = Math.max(minQty, Math.min(quantity, maxQty));
+        quantity = roundToStepSize(quantity, stepSize);
+    }
+
+    console.log(`Quantity after adjustments for ${symbol}:`, quantity);
+
+    data.quantity = currentBalance;
+
+    console.log(`Final Quantity for ${symbol}:`, quantity);
+
+    const signature = crypto.createHmac('sha256', process.env.SECRET_KEY).update(`${new URLSearchParams(data)}`).digest('hex');
+    const newData = { ...data, signature };
+    const qs = `?${new URLSearchParams(newData)}`;
+
+    try {
+        const result = await axios({
+            method: 'POST',
+            url: `${process.env.API_URL}/v3/order${qs}`,
+            headers: { 'X-MBX-APIKEY': process.env.API_KEY }
+        });
+        logMessage(`API Response for ${side} order ${symbol}: ${JSON.stringify(result.data)}`);
+        return result.data;
+    } catch (err) {
+            if (err.response) {
+              
+                // Log the whole response if it exists
+                console.error(`Error in placing ${side} order for ${symbol}:`, err.response.data);
+                logMessage2(`Error in placing ${side} order for ${symbol}: ${JSON.stringify(err.response.data)}`);
+            } else if (err.request) {
+                // The request was made but no response was received
+                console.error(`No response received for ${symbol}:`, err.request);
+            } else {
+                // Something happened in setting up the request
+                console.error(`Error setting up request for ${symbol}:`, err.message);
+            }
+            return false;
+        }
+    }
+
 
 // Function to adjust quantity according to LOT_SIZE filter
 function adjustQuantityForLotSize(quantity, minQty, maxQty, stepSize) {
@@ -117,7 +191,7 @@ function getCurrentPrice(symbol) {
 
 
 async function newOrder(symbol, quantity, side, quoteOrderQty) {
-    console.log(`Placing new order for symbol: ${symbol}`);
+    console.log(`Placing new ${side} order for symbol: ${symbol}`);
 
     const data = {
         symbol,
@@ -152,12 +226,7 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
     console.log(`Quantity after LOT_SIZE adjustment for ${symbol}:`, quantity);
 
     if (side !== "BUY") {
-        quantity = Math.min(quantity, currentBalance);
-        quantity = roundToStepSize(quantity, stepSize);
-        if (isNaN(quantity)) {
-            console.error(`Quantity became NaN after balance adjustment for ${symbol}`);
-            return false;
-        }
+        quantity = currentBalance;
     }
 
     console.log(`Quantity after balance adjustment for ${symbol}:`, quantity);
@@ -167,9 +236,10 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
     } else {
         data.quantity = quantity || quoteOrderQty;
     }
-
+    
     console.log(`Final Quantity for ${symbol}:`, quantity);
-
+ 
+    
     const signature = crypto.createHmac('sha256', process.env.SECRET_KEY).update(`${new URLSearchParams(data)}`).digest('hex');
     const newData = { ...data, signature };
     const qs = `?${new URLSearchParams(newData)}`;
@@ -180,10 +250,23 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
             url: `${process.env.API_URL}/v3/order${qs}`,
             headers: { 'X-MBX-APIKEY': process.env.API_KEY }
         });
-        logMessage(`API Response for ${symbol}: ${JSON.stringify(result.data)}`);
+        logMessage(`API Response for ${side} order ${symbol}: ${JSON.stringify(result.data)}`);
         return result.data;
     } catch (err) {
-        logMessage2(`Error in placing order for ${symbol}: ${JSON.stringify(err.response.data.message)}`);
+        if (err.response) {
+            if (side == "SELL") {
+                swapBTCtoUSDT();
+            }
+            // Log the whole response if it exists
+            console.error(`Error in placing ${side} order for ${symbol}:`, err.response.data);
+            logMessage2(`Error in placing ${side} order for ${symbol}: ${JSON.stringify(err.response.data)}`);
+        } else if (err.request) {
+            // The request was made but no response was received
+            console.error(`No response received for ${symbol}:`, err.request);
+        } else {
+            // Something happened in setting up the request
+            console.error(`Error setting up request for ${symbol}:`, err.message);
+        }
         return false;
     }
 }
