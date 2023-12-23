@@ -1,11 +1,13 @@
-const { exchangeInfo, newOrder } = require("./api");
+const {  newOrder } = require("./api");
+const { exchangeInfo } = require("./converter");
 const stream = require("./stream");
 const { logMessage } = require("./api");
-
+const { swapBTCtoUSDT, convertAllAssetsToUSDT } = require('./converter');
 const QUOTE = process.env.QUOTE;
 const AMOUNT = parseInt(process.env.AMOUNT);
 const INTERVAL = parseInt(process.env.CRAWLER_INTERVAL);
 const PROFITABILITY = parseFloat(process.env.PROFITABILITY);
+const crypto = require('crypto');
 
 function getBuyBuySell(buySymbols, allSymbols, symbolsMap) {
     const buyBuySell = [];
@@ -127,10 +129,10 @@ function getSymbolMap(symbols) {
 
 async function start() {
     //pega todas moedas que estão sendo negociadas
-    logMessage('Loading Exchange Info...');
-    const allSymbols = await exchangeInfo();
+    // logMessage('Loading Exchange Info...');
+     const allSymbols = await exchangeInfo();
 
-    //moedas que você pode comprar
+    // //moedas que você pode comprar
     const buySymbols = allSymbols.filter(s => s.quote === QUOTE);
     logMessage('There are ' + buySymbols.length + " pairs that you can buy with " + QUOTE);
 
@@ -152,5 +154,6 @@ async function start() {
     }, INTERVAL || 3000)
 
 }
+
 
 start();

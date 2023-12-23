@@ -120,7 +120,7 @@ function getCurrentPrice(symbol) {
 
 
 async function newOrder(symbol, quantity, side, quoteOrderQty) {
-    console.log(`Placing new ${side} order for symbol: ${symbol}`);
+    logMessage(`Placing new ${side} order for symbol: ${symbol}`);
 
     const data = {
         symbol,
@@ -145,20 +145,20 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
         console.error(`Invalid current balance for ${asset}:`, currentBalance);
         return false;
     }
-    logMessage(`Current ${asset} balance: ${currentBalance}`);
+    console.log(`Current ${asset} balance: ${currentBalance}`);
 
     if (minQty && maxQty && stepSize) {
         quantity = Math.max(minQty, Math.min(quantity, maxQty));
         quantity = roundToStepSize(quantity, stepSize);
+        logMessage(`Quantity after LOT_SIZE adjustment for ${symbol}:`, quantity);
     }
-
-    console.log(`Quantity after LOT_SIZE adjustment for ${symbol}:`, quantity);
-
+    
     if (side !== "BUY") {
-        quantity = currentBalance;
+        quantity = Math.min(currentBalance, quantity); // Ensuring the quantity does not exceed the balance
+        logMessage(`Quantity after balance adjustment for ${symbol}:`, quantity);
     }
 
-    console.log(`Quantity after balance adjustment for ${symbol}:`, quantity);
+    logMessage(`Quantity after balance adjustment for ${symbol}:`, quantity);
 
     if (side === "BUY" && quantity) {
         data.quoteOrderQty = quantity;
@@ -166,7 +166,7 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
         data.quantity = quantity || quoteOrderQty;
     }
     
-    console.log(`Final Quantity for ${symbol}:`, quantity);
+    logMessage(`Final Quantity for ${symbol}:`, quantity);
  
     
     const signature = crypto.createHmac('sha256', process.env.SECRET_KEY).update(`${new URLSearchParams(data)}`).digest('hex');
@@ -185,7 +185,11 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
         if (err.response) {
             if (side == "SELL") {
                 swapBTCtoUSDT();
-                swapBNBtoUSDT();
+                convertAllAssetsToUSDT();
+            }
+
+            if (side == "BUY") {
+                return false;
             }
             // Log the whole response if it exists
             console.error(`Error in placing ${side} order for ${symbol}:`, err.response.data);
@@ -202,4 +206,4 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
 }
 
 
-module.exports = { exchangeInfo, newOrder, logMessage, logMessage2 }
+module.exports = { exchangeInfo, newOrder, logMessage, logMessage2  }

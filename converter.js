@@ -2,10 +2,27 @@ const axios = require('axios');
 const crypto = require('crypto');
 const io = require('./logging/logger');
 
+
 function logMessage2(message) {
     const currentTime = new Date().toLocaleTimeString(); 
     const formattedMessage = `${currentTime}: ${JSON.stringify(message, null, 2)}`;
     io.emit('log2', formattedMessage); 
+}
+
+function logMessage(message) {
+    const currentTime = new Date().toLocaleTimeString();
+
+    let formattedMessage;
+
+    try {
+        // If the message is not a valid JSON object, handle it as a string
+        formattedMessage = `${currentTime}: ${message.toString()}`;
+    } catch (error) {
+        // Attempt to stringify if the message is a valid JSON object
+        formattedMessage = `${currentTime}: ${JSON.stringify(message, null, 2)}`;
+    }
+
+    io.emit('log1', formattedMessage);
 }
 
 
@@ -42,7 +59,7 @@ async function swapBTCtoUSDT() {
     let quantity;
     const side = 'SELL'; // Change to SELL to sell BTC for USDT
 
-    console.log(`Placing new ${side} order for symbol: ${symbol}`);
+    logMessage(`Placing new ${side} order for symbol: ${symbol}`);
 
     const data = {
         symbol,
@@ -73,7 +90,7 @@ async function swapBTCtoUSDT() {
         quantity = roundToStepSize(quantity, stepSize);
     }
 
-    console.log(`Quantity after adjustments for ${symbol}:`, quantity);
+    logMessage(`Quantity after adjustments for ${symbol}:`, quantity);
 
     data.quantity = quantity; // Use the adjusted quantity
 
@@ -87,14 +104,14 @@ async function swapBTCtoUSDT() {
         const result = await axios.post(`${process.env.API_URL}/v3/order${qs}`, null, {
             headers: { 'X-MBX-APIKEY': process.env.API_KEY }
         });
-        console.log(`API Response for ${side} order ${symbol}:`, result.data);
+        logMessage(`API Response for SELL order ${symbol}:`, result.data);
         return result.data;
     } catch (err) {
             if (err.response) {
               
                 // Log the whole response if it exists
-                console.error(`Error in placing ${side} order for ${symbol}:`, err.response.data);
-                logMessage2(`Error in placing ${side} order for ${symbol}: ${JSON.stringify(err.response.data)}`);
+                console.error(`Error in placing SELL order for ${symbol}:`, err.response.data);
+                logMessage2(`Error in placing SELL order for ${symbol}: ${JSON.stringify(err.response.data)}`);
             } else if (err.request) {
                 // The request was made but no response was received
                 console.error(`No response received for ${symbol}:`, err.request);
@@ -109,7 +126,7 @@ async function swapBTCtoUSDT() {
         const symbol = `${assetSymbol}USDT`;
         const side = 'SELL';
     
-        console.log(`Placing new ${side} order for symbol: ${symbol}`);
+        logMessage(`Placing new ${side} order for symbol: ${symbol}`);
     
         const data = {
             symbol,
@@ -122,18 +139,18 @@ async function swapBTCtoUSDT() {
     
         const { minQty, maxQty, stepSize } = exchangeData[symbol] || {};
     
-        let currentBalance = await getCurrentBalance('BNB'); // Fetch current BNB balance
+        let currentBalance = await getCurrentBalance(assetSymbol); // Fetch current BNB balance
         if (!currentBalance) {
-            console.error('Failed to fetch current BNB balance');
+            console.error('Failed to fetch current ${assetSymbol} balance');
             return false;
         }
     
         currentBalance = parseFloat(currentBalance);
         if (isNaN(currentBalance)) {
-            console.error('Invalid current BNB balance:', currentBalance);
+            console.error('Invalid current ${assetSymbol} balance:', currentBalance);
             return false;
         }
-        console.log(`Current BNB balance is: ${currentBalance}`);
+        console.log(`Current ${assetSymbol} balance is: ${currentBalance}`);
     
         quantity = currentBalance;
         if (minQty && maxQty && stepSize) {
@@ -141,7 +158,7 @@ async function swapBTCtoUSDT() {
             quantity = roundToStepSize(quantity, stepSize);
         }
     
-        console.log(`Quantity after adjustments for ${symbol}:`, quantity);
+        logMessage(`Quantity after adjustments for ${symbol}:`, quantity);
     
         data.quantity = quantity; // Use the adjusted quantity
     
@@ -155,7 +172,7 @@ async function swapBTCtoUSDT() {
             const result = await axios.post(`${process.env.API_URL}/v3/order${qs}`, null, {
                 headers: { 'X-MBX-APIKEY': process.env.API_KEY }
             });
-            console.log(`API Response for ${side} order ${symbol}:`, result.data);
+            logMessage(`API Response for ${side} order ${symbol}:`, result.data);
             return result.data;
         } catch (err) {
             if (err.response) {
@@ -178,7 +195,14 @@ async function swapBTCtoUSDT() {
         try {
             const assets = await getAllAssets();
     
-            for (const asset of assets) {
+            // Sort assets based on total balance (free + locked) in descending order
+            const sortedAssets = assets.sort((a, b) => {
+                const totalBalanceA = parseFloat(a.free) + parseFloat(a.locked);
+                const totalBalanceB = parseFloat(b.free) + parseFloat(b.locked);
+                return totalBalanceB - totalBalanceA;
+            });
+    
+            for (const asset of sortedAssets) {
                 if (asset.symbol === 'USDT') continue;
     
                 const directPair = `${asset.symbol}USDT`;
@@ -186,7 +210,7 @@ async function swapBTCtoUSDT() {
                 if (await isTradable(directPair)) {
                     await convertAssetToUSDT(asset.symbol, directPair);
                 } else {
-                    console.log(`No direct trading pair available for ${asset.symbol} to USDT`);
+                    logMessage2(`No direct trading pair available for ${asset.symbol} to USDT`);
                     await convertThroughIntermediate(asset.symbol); // Function to convert through an intermediate
                 }
             }
@@ -194,6 +218,7 @@ async function swapBTCtoUSDT() {
             console.error('Error converting assets to USDT:', error);
         }
     }
+    
 
     async function convertThroughIntermediate(assetSymbol) {
         // Define your intermediate currency, e.g., BTC or BNB
@@ -243,10 +268,17 @@ async function swapBTCtoUSDT() {
         }
     }
     
+    async function isTradable(pair) {
+        try {
+            const response = await axios.get(`${process.env.API_URL}/v1/exchangeInfo`);
+            const pairInfo = response.data.symbols.find(symbol => symbol.symbol === pair);
+            return pairInfo ? pairInfo.status === 'TRADING' : false;
+        } catch (error) {
+            console.error(`Error checking if pair ${pair} is tradable:`, error);
+            return false;
+        }
+    }
     
-    
-    
-
 
     async function getAllAssets() {
         try {
@@ -259,7 +291,6 @@ async function swapBTCtoUSDT() {
                 url: `${process.env.API_URL}/v3/account?${queryString}&signature=${signature}`,
                 headers: { 'X-MBX-APIKEY': process.env.API_KEY }
             });
-    
             return response.data.balances
                 .filter(asset => parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0)
                 .map(asset => ({
@@ -267,11 +298,37 @@ async function swapBTCtoUSDT() {
                     free: asset.free,
                     locked: asset.locked
                 }));
+
         } catch (error) {
             console.error('Error fetching assets:', error);
             return [];
         }
     }
 
+    async function exchangeInfo() {
+        const response = await axios.get(`${process.env.API_URL}/v3/exchangeInfo`);
+        const data = response.data.symbols.filter(s => s.status === 'TRADING').map(s => {
+            const lotSizeFilter = s.filters.find(f => f.filterType === 'LOT_SIZE') || {};
+            return {
+                symbol: s.symbol,
+                base: s.baseAsset,
+                quote: s.quoteAsset,
+                baseAssetPrecision: s.baseAssetPrecision,
+                quoteAssetPrecision: s.quoteAssetPrecision,
+                minQty: lotSizeFilter.minQty ? parseFloat(lotSizeFilter.minQty) : null,
+                maxQty: lotSizeFilter.maxQty ? parseFloat(lotSizeFilter.maxQty) : null,
+                stepSize: lotSizeFilter.stepSize ? parseFloat(lotSizeFilter.stepSize) : null
+            };
+        });
+    
+         // Store fetched data in the global variable
+         exchangeData = data.reduce((acc, curr) => {
+            acc[curr.symbol] = curr;
+            return acc;
+        }, {});
+    
+        return data;
+    }
 
-    module.exports = { swapBTCtoUSDT, convertAllAssetsToUSDT };
+
+    module.exports = { swapBTCtoUSDT, convertAllAssetsToUSDT,exchangeInfo };
