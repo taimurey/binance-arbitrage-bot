@@ -2,12 +2,11 @@ const {  newOrder } = require("./api");
 const { exchangeInfo } = require("./converter");
 const stream = require("./stream");
 const { logMessage } = require("./api");
-const { swapBTCtoUSDT, convertAllAssetsToUSDT } = require('./converter');
+const {  convertAllAssetsToUSDT } = require('./converter');
 const QUOTE = process.env.QUOTE;
 const AMOUNT = parseInt(process.env.AMOUNT);
 const INTERVAL = parseInt(process.env.CRAWLER_INTERVAL);
 const PROFITABILITY = parseFloat(process.env.PROFITABILITY);
-const crypto = require('crypto');
 
 function getBuyBuySell(buySymbols, allSymbols, symbolsMap) {
     const buyBuySell = [];
@@ -151,9 +150,12 @@ async function start() {
         logMessage(new Date());
         processBuyBuySell(buyBuySell);
         processBuySellSell(buySellSell);
+        // convertAllAssetsToUSDT();
     }, INTERVAL || 3000)
 
+    
 }
+
 
 
 start();

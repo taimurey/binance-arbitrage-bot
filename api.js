@@ -1,7 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
 const io = require('./logging/logger');
-const { swapBTCtoUSDT, convertAllAssetsToUSDT } = require('./converter');
+const { swapBTCtoUSDT } = require('./converter');
 
 async function exchangeInfo() {
     const response = await axios.get(`${process.env.API_URL}/v3/exchangeInfo`);
@@ -185,7 +185,6 @@ async function newOrder(symbol, quantity, side, quoteOrderQty) {
         if (err.response) {
             if (side == "SELL") {
                 swapBTCtoUSDT();
-                convertAllAssetsToUSDT();
             }
 
             if (side == "BUY") {
