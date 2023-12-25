@@ -1,4 +1,4 @@
-# README for Binance Arbitrage Bot
+# Binance Arbitrage Bot
 
 ## Introduction
 
